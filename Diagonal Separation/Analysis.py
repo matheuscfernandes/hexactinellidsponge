@@ -20,15 +20,15 @@ session.journalOptions.setValues(replayGeometry=COORDINATE, recoverGeometry=COOR
 
 execfile('Functions.py')
 
-TOL=10E-6
-spacing=1.
-Strain_Y=-0.1
-rr=0.1
+TOL=10E-6 #periodic boundary search tolerance
+spacing=1. #structure spacing
+ApplyDisp_Y=-0.1 #applied y displacment boundary condition
+rr=0.1 #non-diagonal radius, diagonal radius will scale acordingly as 1/2*rr
 YoungsModulus=1.0
 PoissonsRatio=0.0
 JobName="ParametrizedDiag"
 
-SeparationAll=np.array([0.001,0.25/2.,0.25,0.25*3/2.,0.5])*spacing
+SeparationAll=np.array([0.001,0.5*1/4.,0.25,0.5*3/4.,0.5])*spacing
 
 ct=-1
 for Separation in SeparationAll:
@@ -50,7 +50,6 @@ for Separation in SeparationAll:
         3.*spacing/2., 2.*spacing))
 
     # CREATING UNICEL FOR THE TWO DIAGONAL PART
-
     shift=(spacing/2.-Separation);
 
     sp1=spacing/2.+shift;
@@ -152,6 +151,7 @@ for Separation in SeparationAll:
     Part_Full.Set(name='DIAGONAL', edges=diagIndex)
     Part_Full.Set(name='EDGES', edges=edgeIndex)
 
+    #APPLYING PERIODIC BOUNDARY CONDITIONS
     (NameRef1, NameRef2, repConst)=PeriodicBound2D(mdb,'Model-1','AllEdgeNode',[(2.0*spacing,0.0),(0.0,2.0*spacing)])
 
     #CREATE NODE SETS IN THE VIRTUAL POINT NODES TO EXTRACT THE REACTION FORCE
@@ -162,14 +162,14 @@ for Separation in SeparationAll:
     mdb.models['Model-1'].parts[NameRef2].Set(name='Set-1', referencePoints=(
         mdb.models['Model-1'].parts[NameRef2].referencePoints[1], ))
 
-    # DEFINING MATERIAL PROPERTIES AND SECTION PROPERTIES
+    #DEFINING MATERIAL PROPERTIES AND SECTION PROPERTIES
     mdb.models['Model-1'].Material(name='Material-1')
     mdb.models['Model-1'].materials['Material-1'].Elastic(table=((YoungsModulus, PoissonsRatio), ))
 
     REDGES=rr
     RDIAGONALS=rr/2.
 
-    # DEFINING SECTION FOR EDGE STRUTS (NON-DIAGONAL)
+    #DEFINING SECTION FOR EDGE STRUTS (NON-DIAGONAL)
     mdb.models['Model-1'].CircularProfile(name='EDGES', r=REDGES)
     mdb.models['Model-1'].BeamSection(consistentMassMatrix=False, integration=
         DURING_ANALYSIS, material='Material-1', name='EDGES', poissonRatio=0.0,
@@ -182,7 +182,7 @@ for Separation in SeparationAll:
         N1_COSINES, n1=(0.0, 0.0, -1.0), region=
         mdb.models['Model-1'].parts['Part-1'].sets['EDGES'])
 
-    # DEFINING SECTION FOR THE DIAGONAL STRUTS
+    #DEFINING SECTION FOR THE DIAGONAL STRUTS
     mdb.models['Model-1'].CircularProfile(name='DIAGONAL', r=RDIAGONALS)
     mdb.models['Model-1'].BeamSection(consistentMassMatrix=False, integration=
         DURING_ANALYSIS, material='Material-1', name='DIAGONAL', poissonRatio=0.0,
@@ -195,71 +195,65 @@ for Separation in SeparationAll:
         N1_COSINES, n1=(0.0, 0.0, -1.0), region=
         mdb.models['Model-1'].parts['Part-1'].sets['DIAGONAL'])
 
-
     #APPLY BC
-    #Apply boundary conditions on reference nodes
     THETAALL=np.linspace(0,1,30)*90.
-
+    #AVOID RIDGID BODY MOTION
     mdb.models['Model-1'].DisplacementBC(amplitude=UNSET, createStepName='Step-1',
         distributionType=UNIFORM, fieldName='', fixed=OFF, localCsys=None, name=
         'BC-FIXNODE', region=Region(
         nodes=mdb.models['Model-1'].rootAssembly.instances['Part-1-1'].nodes.getByBoundingSphere(center=(spacing/2.,spacing/2.,0), radius=TOL)),
-        u1=0.0, u2=0.0, ur3=0.0)
+        u1=0.0, u2=0.0, ur3=UNSET)
 
     for THETA in THETAALL:
-        # mdb.models['Model-1'].ConcentratedForce(cf1=UNSET,cf2=10 ,createStepName='Step-1',
-     #        distributionType=UNIFORM, field='', localCsys=None, name='Load-Ref-2', region=
-     #        Region(referencePoints=(mdb.models['Model-1'].rootAssembly.instances[NameRef2].referencePoints[1],)))
-
         mdb.models['Model-1'].DisplacementBC(amplitude=UNSET, createStepName='Step-1',
             distributionType=UNIFORM, fieldName='', fixed=OFF, localCsys=None, name=
             'BC-REF-1', region=Region(referencePoints=(
             mdb.models['Model-1'].rootAssembly.instances[NameRef1].referencePoints[1],
             )), u1=UNSET, u2=UNSET, ur3=UNSET)
-
         mdb.models['Model-1'].DisplacementBC(amplitude=UNSET, createStepName='Step-1',
             distributionType=UNIFORM, fieldName='', fixed=OFF, localCsys=None, name=
             'BC-REF-2', region=Region(referencePoints=(
             mdb.models['Model-1'].rootAssembly.instances[NameRef2].referencePoints[1],
-            )), u1=UNSET, u2=Strain_Y, ur3=UNSET)
+            )), u1=UNSET, u2=ApplyDisp_Y, ur3=UNSET)
 
+        #ROTATE PART TO DESIRED ORIENTATION
         mdb.models['Model-1'].rootAssembly.rotate(angle=THETA, axisDirection=(0.0, 0.0,
             1.0), axisPoint=(spacing, spacing, 0.0), instanceList=('Part-1-1', ))
 
+        #UPDATE PERIODIC BOUNDARY CONDITIONS
         UpdatePeriodicBound2D(mdb,'Model-1',NameRef1,NameRef2,repConst)
 
+        #ENFORCE STRAIN TENSOR COMPATIBILITY TO AVOID RIGID BODY ROTATION
         mdb.models['Model-1'].Equation(name='RefPoint-Couple1', terms=((1.0,NameRef1, 2),(-1.0, NameRef2, 1)))
 
+        #SUBMIT JOB TO ABAQUS SOLVER
         DeleteAbaqusFiles(JobName)
-
         mdb.models['Model-1'].rootAssembly.regenerate()
-
         mdb.Job(atTime=None, contactPrint=OFF, description='', echoPrint=OFF,
             explicitPrecision=SINGLE, getMemoryFromAnalysis=True, historyPrint=OFF,
             memory=90, memoryUnits=PERCENTAGE, model='Model-1', modelPrint=OFF,
             multiprocessingMode=DEFAULT, name=JobName, nodalOutputPrecision=SINGLE,
             numCpus=1, numGPUs=0, queue=None, scratch='', type=ANALYSIS,
             userSubroutine='', waitHours=0, waitMinutes=0)
-
         mdb.jobs[JobName].submit(consistencyChecking=OFF)
         mdb.jobs[JobName].waitForCompletion()
-
-
         time.sleep(10)
 
+        #EXTRACT INFORMATION INTO FILES
         [Time,DXX,DXY]=ExtractVirtualPointU(NameRef1,'Step-1','Set-1',JobName)
         [Time,DYX,DYY]=ExtractVirtualPointU(NameRef2,'Step-1','Set-1',JobName)
 
         [TimeS,SXX,SXY]=ExtractVirtualPointRF(NameRef1,'Step-1','Set-1',JobName)
         [TimeS,SYX,SYY]=ExtractVirtualPointRF(NameRef2,'Step-1','Set-1',JobName)
 
-
         file.write('%e %e %e %e %e %e %e\r\n' % (Time, Separation/spacing, THETA, DXX, DXY, DYX, DYY))
         file2.write('%e %e %e %e %e %e %e\r\n' % (TimeS, Separation/spacing, THETA, SXX, SXY, SYX, SYY))
 
+        #ROTATE PART BACK TO ORIGINAL ALLIGNMENT
         mdb.models['Model-1'].rootAssembly.rotate(angle=-THETA, axisDirection=(0.0, 0.0,
             1.0), axisPoint=(spacing, spacing, 0.0), instanceList=('Part-1-1', ))
 
+        #CLEAR ABAQUS STATUS FILES
         DeleteAbaqusFilesButODB(JobName)
 
     file.close()
