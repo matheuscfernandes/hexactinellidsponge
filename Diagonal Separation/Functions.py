@@ -19,39 +19,30 @@ def DeleteAbaqusFiles(Job):
 	try:
 		os.remove(Job+'.odb')
 	except: pass
-	
 	try:
 		os.remove(Job+'.dat')
 	except: pass
-	
 	try:
 		os.remove(Job+'.com')
 	except: pass
-	
 	try:
 		os.remove(Job+'.ipm')
 	except: pass
-	
 	try:
 		os.remove(Job+'.log')
 	except: pass
-	
 	try:
 		os.remove(Job+'.prt')
 	except: pass
-	
 	try:
 		os.remove(Job+'.sim')
 	except: pass
-	
 	try:
 		os.remove(Job+'.sta')
 	except: pass
-		
 	try:
 		os.remove(Job+'.msg')
 	except: pass
-	
 	try:
 		os.remove(Job+'.lck')
 	except: pass
@@ -60,188 +51,55 @@ def DeleteAbaqusFilesButODB(Job):
 	try:
 		os.remove(Job+'.dat')
 	except: pass
-	
 	try:
 		os.remove(Job+'.com')
 	except: pass
-	
 	try:
 		os.remove(Job+'.ipm')
 	except: pass
-	
 	try:
 		os.remove(Job+'.log')
 	except: pass
-	
 	try:
 		os.remove(Job+'.prt')
 	except: pass
-	
 	try:
 		os.remove(Job+'.sim')
 	except: pass
-	
 	try:
 		os.remove(Job+'.sta')
 	except: pass
-		
 	try:
 		os.remove(Job+'.msg')
 	except: pass
-	
 	try:
 		os.remove(Job+'.lck')
 	except: pass
-				
-
-def ApplyConstraints():
-	#DEFINING PARAMETERS FOR THE CODE THAT FOLLOWS
-	Part_Full=mdb.models['Model-1'].parts['Part-1']
-	# SETS OF PERIODIC NODE PAIRS
-	# UP AND DOWN 
-	for i in Part_Full.sets['Face1'].nodes:
-		TopCoordinate = i.coordinates
-		for j in Part_Full.sets['Face2'].nodes:
-			DownCoordinate = j.coordinates
-			if (fabs(TopCoordinate[0] - DownCoordinate[0]) + fabs(TopCoordinate[1] - DownCoordinate[1])<0.001):
-				Part_Full.SetFromNodeLabels(name='Face1_Node_Pair_' + str(i.label), nodeLabels=(i.label,))
-				Part_Full.SetFromNodeLabels(name='Face2_Node_Pair_' + str(i.label), nodeLabels=(j.label,))
-				break
-	#DEFINING EQUATION
-	# UP AND DOWN EDGES
-	for i in Part_Full.sets['Face1'].nodes:
-		# Z-COORDINATE OF DEPENDENT SET
-		mdb.models['Model-1'].Equation(name='Equation_Constraint' + str(i.label), terms=(
-			( 1.0, 'Part-1-1.Face1_Node_Pair_' + str(i.label), 3), 
-			(-1.0, 'Part-1-1.Face2_Node_Pair_' + str(i.label), 3)))#, 
-	for j in Part_Full.sets['Face1'].nodes:
-		# Z-COORDINATE OF DEPENDENT SET
-		mdb.models['Model-1'].Equation(name='Equation_Constraint_Y' + str(j.label), terms=(
-			( 1.0, 'Part-1-1.Face1_Node_Pair_' + str(j.label), 2), 
-			(-1.0, 'Part-1-1.Face2_Node_Pair_' + str(j.label), 2)))#, 		
-	for k in Part_Full.sets['Face1'].nodes:
-		# Z-COORDINATE OF DEPENDENT SET
-		mdb.models['Model-1'].Equation(name='Equation_Constraint_X' + str(k.label), terms=(
-			( 1.0, 'Part-1-1.Face1_Node_Pair_' + str(k.label), 1), 
-			(-1.0, 'Part-1-1.Face2_Node_Pair_' + str(k.label), 1)))#, 	
-
-def GetStrain(JobName,SetName):
-	NameStep='Step-1'
-	instancename='PART-1-1'
-	odb=openOdb(path=JobName+'.odb')
-	lastFrame=odb.steps[NameStep].frames[-1]
-	set=odb.rootAssembly.instances[instancename].elementSets[SetName]
-	elemStrain=lastFrame.fieldOutputs['CE']
-	values=elemStrain.getSubset(region=set,position=ELEMENT_NODAL).values
-	strain=[]
-	for i in range(0,len(values)):
-		strain.append(values[i].data[4])
-		
-	return max(strain)
-	
-def GetStrainAll(JobName,NodeSetName,Field,num):
-	NameStep='Step-1'
-	instancename='PART-1-1'
-	odb=openOdb(path=JobName+'.odb')
-	lastFrame=odb.steps[NameStep].frames[-1]
-	set=odb.rootAssembly.instances[instancename].nodeSets[NodeSetName]
-
-	elemStrain=lastFrame.fieldOutputs[Field]
-	values=elemStrain.getSubset(region=set,position=ELEMENT_NODAL).values
-
-	index=[]
-	for i in range(0,len(set.nodes)):
-		setNodeLabel=set.nodes[i].label
-		for j in range(0,len(values)):
-			strainNodeLabel=values[j].nodeLabel
-			if strainNodeLabel==setNodeLabel:
-				index.append([i,j])
-
-	strain=[]
-	xCoor=[]
-	yCoor=[]			
-	for k in range(0,len(index)):
-		i=index[k][0]
-		j=index[k][1]
-		strain.append(values[j].data[num])
-		xCoor.append(set.nodes[i].coordinates[0])
-		yCoor.append(set.nodes[i].coordinates[1])
-	odb.close()
-	return strain,xCoor,yCoor
-	
-def ReturnRF(instancename,setname,JobName):  
-	NameStep='Step-1'
-	odb=openOdb(path=JobName+'.odb')
-	FrameLength=len(odb.steps[NameStep].frames)
-	Frame=odb.steps[NameStep].frames[FrameLength-1]
-	Time=odb.steps[NameStep].frames[FrameLength-1].frameValue
-	set=odb.rootAssembly.nodeSets[setname] 
-	displacement=Frame.fieldOutputs['RF'].getSubset(region=set).values
-	xRF=[]
-	yRF=[]
-	zRF=[]
-
-	xCoor=[]
-	yCoor=[]
-	for nod in range(0,len(set.nodes)):
-		xRF.append(displacement[nod].data[0])
-		yRF.append(displacement[nod].data[1])
-		zRF.append(displacement[nod].data[2])
-
-	odb.close()
-	return np.sum(xRF), np.sum(yRF), np.sum(zRF)
-
-def ExtractRF(setname,JobName,OutputFile):  
-	NameStep='Step-1'
-	instancename='PART-1-1'
-	text_file = open(OutputFile, 'w')
-	odb=openOdb(path=JobName+'.odb')
-	FrameLength=len(odb.steps[NameStep].frames)
-	Frame=odb.steps[NameStep].frames[FrameLength-1]
-	Time=odb.steps[NameStep].frames[FrameLength-1].frameValue
-	set=odb.rootAssembly.instances[instancename].nodeSets[setname] 
-	displacement=Frame.fieldOutputs['RF'].getSubset(region=set).values
-	
-	for nod in range(0,len(set.nodes)):
-				xRF=displacement[nod].data[0]
-				yRF=displacement[nod].data[1]
-				zRF=displacement[nod].data[2]
-				
-				xCoor=set.nodes[nod].coordinates[0]
-				yCoor=set.nodes[nod].coordinates[1]
-				
-				
-				text_file.write('%e %e %e %e %e %e\r\n' % (Time, xCoor, yCoor, xRF, yRF, zRF))	
-	text_file.close()
-	odb.close()
 
 def ExtractVirtualPointRF(instanceVP,stepName,nodeSetVP,JobName):
 	odb=openOdb(path=JobName+'.odb')
 	set = odb.rootAssembly.instances[instanceVP.upper()].nodeSets[nodeSetVP.upper()]
-	
+
 	Frame = odb.steps[stepName].frames[-1].frameValue
 	RF1 = odb.steps[stepName].frames[-1].fieldOutputs['RF'].getSubset(region = set).values[0].data[0]
 	RF2 = odb.steps[stepName].frames[-1].fieldOutputs['RF'].getSubset(region = set).values[0].data[1]
-	
+
 	odb.close()
 	return Frame,RF1,RF2
 
-def ExtractVirtualPointU(instancename,NameStep,setname,JobName):  
+def ExtractVirtualPointU(instancename,NameStep,setname,JobName):
 	odb=openOdb(path=JobName+'.odb')
 	FrameLength=len(odb.steps[NameStep].frames)
 	Frame=odb.steps[NameStep].frames[-1]
 	Time=odb.steps[NameStep].frames[-1].frameValue
-	set=odb.rootAssembly.instances[instancename.upper()].nodeSets[setname.upper()] 
+	set=odb.rootAssembly.instances[instancename.upper()].nodeSets[setname.upper()]
 	displacement=Frame.fieldOutputs['U'].getSubset(region=set).values
-	
+
 	xDisp=displacement[0].data[0]
 	yDisp=displacement[0].data[1]
 
 	odb.close()
 	return Time,xDisp,yDisp
-				
-
-
 
 def PeriodicBound2D(mdb,NameModel,NameSet,LatticeVec):
     from part import TWO_D_PLANAR, DEFORMABLE_BODY
@@ -253,9 +111,9 @@ def PeriodicBound2D(mdb,NameModel,NameSet,LatticeVec):
     mdb.models[NameModel].Part(dimensionality=TWO_D_PLANAR, name=NameRef2, type=
         DEFORMABLE_BODY)
     mdb.models[NameModel].parts[NameRef2].ReferencePoint(point=(0.0, 0.0, 0.0))
-    mdb.models[NameModel].rootAssembly.Instance(dependent=ON, name=NameRef1, 
+    mdb.models[NameModel].rootAssembly.Instance(dependent=ON, name=NameRef1,
         part=mdb.models[NameModel].parts[NameRef1])
-    mdb.models[NameModel].rootAssembly.Instance(dependent=ON, name=NameRef2, 
+    mdb.models[NameModel].rootAssembly.Instance(dependent=ON, name=NameRef2,
         part=mdb.models[NameModel].parts[NameRef2])
 
     #Create set of reference points
@@ -296,19 +154,17 @@ def PeriodicBound2D(mdb,NameModel,NameSet,LatticeVec):
 			    				terms=((1.0,'Node-1-'+str(repConst), Dim1),(-1.0, 'Node-2-'+str(repConst), Dim1) ,
 			    	   		        (dx, 'RefPoint-'+str(Dim1-1), 1),(dy, 'RefPoint-'+str(Dim1-1), 2)))
 		    			mdb.models[NameModel].Equation(name='Rotation'+'-'+str(repConst), terms=(
-   						    (1.0, 'Node-1-'+str(repConst), 6), 
+   						    (1.0, 'Node-1-'+str(repConst), 6),
         					(-1.0, 'Node-2-'+str(repConst), 6)))
 		    			repConst=repConst+1	#Increase integer for naming equation constraint
 		    			ranNodes.remove(repnod1)#Remove used node from available list
 		    			stop=True		#Don't look further, go to following node.
 		    			break
-	
+
     #Return coordinates of free node so that it can be fixed
     return (NameRef1, NameRef2, repConst)
 
-
 def UpdatePeriodicBound2D(mdb,NameModel,NameRef1,NameRef2,repConst):
-	
 	for j in xrange(0,repConst):
 		Node1=mdb.models[NameModel].rootAssembly.sets['Node-1-'+str(j)].nodes[0].coordinates
 		Node2=mdb.models[NameModel].rootAssembly.sets['Node-2-'+str(j)].nodes[0].coordinates
@@ -319,9 +175,9 @@ def UpdatePeriodicBound2D(mdb,NameModel,NameRef1,NameRef2,repConst):
 		# 		terms=((1.0,'Node-1-'+str(j), Dim1),(-1.0, 'Node-2-'+str(j), Dim1) ,
 	 #   		        (dx, 'RefPoint-'+str(Dim1-1), 1),(dy, 'RefPoint-'+str(Dim1-1), 2)))
 
-		mdb.models[NameModel].constraints['PerConst1-'+str(j)].setValues(terms=((1.0, 
-		    'Node-1-'+str(j), 1), (-1.0, 'Node-2-'+str(j), 1), (dx, NameRef1, 1), (dy, 
+		mdb.models[NameModel].constraints['PerConst1-'+str(j)].setValues(terms=((1.0,
+		    'Node-1-'+str(j), 1), (-1.0, 'Node-2-'+str(j), 1), (dx, NameRef1, 1), (dy,
 		    NameRef1, 2)))
-		mdb.models[NameModel].constraints['PerConst2-'+str(j)].setValues(terms=((1.0, 
-		    'Node-1-'+str(j), 2), (-1.0, 'Node-2-'+str(j), 2), (dx, NameRef2, 1), (dy, 
+		mdb.models[NameModel].constraints['PerConst2-'+str(j)].setValues(terms=((1.0,
+		    'Node-1-'+str(j), 2), (-1.0, 'Node-2-'+str(j), 2), (dx, NameRef2, 1), (dy,
 		    NameRef2, 2)))

@@ -20,21 +20,18 @@ session.journalOptions.setValues(replayGeometry=COORDINATE, recoverGeometry=COOR
 
 execfile('Functions.py')
 
-spacing=1.
 TOL=10E-6
+spacing=1.
 Strain_Y=-0.1
-cross_section=0.1
 rr=0.1
 YoungsModulus=1.0
 PoissonsRatio=0.0
 JobName="ParametrizedDiag"
 
-Model_DimpleStr=mdb.models['Model-1']
-
-X2ALL=np.array([0.001,0.25/2.,0.25,0.25*3/2.,0.5])*spacing
+SeparationAll=np.array([0.001,0.25/2.,0.25,0.25*3/2.,0.5])*spacing
 
 ct=-1
-for x2 in X2ALL:
+for Separation in SeparationAll:
     Mdb()
     ct+=1
     file = open(JobName+str(ct)+'_D_Output.txt', 'w')
@@ -47,31 +44,14 @@ for x2 in X2ALL:
     mdb.models['Model-1'].sketches['__profile__'].Line(point1=(0, 3.*spacing/2.), point2=(
         2.*spacing, 3.*spacing/2.))
 
-
     mdb.models['Model-1'].sketches['__profile__'].Line(point1=(spacing/2., 0), point2=(
         spacing/2., 2.*spacing))
     mdb.models['Model-1'].sketches['__profile__'].Line(point1=(3.*spacing/2., 0), point2=(
         3.*spacing/2., 2.*spacing))
 
-
-    ###FULL DIAG
-    # mdb.models['Model-1'].sketches['__profile__'].Line(point1=(0.0, spacing), point2=(
-    #     spacing, 2*spacing))
-    # mdb.models['Model-1'].sketches['__profile__'].Line(point1=(2*spacing, 0), point2=(
-    #     0, 2*spacing))
-    # mdb.models['Model-1'].sketches['__profile__'].Line(point1=(spacing, 0), point2=(
-    #     2*spacing, spacing))
-
-    # mdb.models['Model-1'].sketches['__profile__'].Line(point1=(0, 0), point2=(
-    #     2*spacing, 2*spacing))
-    # mdb.models['Model-1'].sketches['__profile__'].Line(point1=(spacing, 2*spacing), point2=(
-    #     2*spacing, spacing))
-    # mdb.models['Model-1'].sketches['__profile__'].Line(point1=(0, spacing), point2=(
-    #     spacing, 0))
-
     # CREATING UNICEL FOR THE TWO DIAGONAL PART
 
-    shift=(spacing/2.-x2);
+    shift=(spacing/2.-Separation);
 
     sp1=spacing/2.+shift;
     sp2=spacing+spacing/2.-shift;
@@ -96,13 +76,11 @@ for x2 in X2ALL:
     mdb.models['Model-1'].sketches['__profile__'].Line(point1=(sp1, 2*spacing), point2=(
         0, sp2))
 
-
     mdb.models['Model-1'].Part(dimensionality=TWO_D_PLANAR, name='Part-1', type=
         DEFORMABLE_BODY)
     mdb.models['Model-1'].parts['Part-1'].BaseWire(sketch=
         mdb.models['Model-1'].sketches['__profile__'])
     del mdb.models['Model-1'].sketches['__profile__']
-
 
     #CREATING INSTANCE AND MESHING
     mdb.models['Model-1'].rootAssembly.DatumCsysByDefault(CARTESIAN)
@@ -159,7 +137,6 @@ for x2 in X2ALL:
     mdb.models['Model-1'].rootAssembly.Set(name='AllNode', nodes=
         Instance_Full.nodes.getByBoundingBox(-3*spacing - TOL, -3*spacing - TOL, -TOL, 3*spacing - TOL, 3*spacing + TOL, TOL))
 
-
     edgeIndex=[]
     diagIndex=[]
     for ii in range(len(Part_Full.edges)):
@@ -184,7 +161,6 @@ for x2 in X2ALL:
     #CREATE NODE SETS IN THE VIRTUAL POINT NODES TO EXTRACT THE REACTION FORCE
     mdb.models['Model-1'].parts[NameRef2].Set(name='Set-1', referencePoints=(
         mdb.models['Model-1'].parts[NameRef2].referencePoints[1], ))
-
 
     # DEFINING MATERIAL PROPERTIES AND SECTION PROPERTIES
     mdb.models['Model-1'].Material(name='Material-1')
@@ -222,11 +198,7 @@ for x2 in X2ALL:
 
     #APPLY BC
     #Apply boundary conditions on reference nodes
-
-    # THETAALL=[30]
-
     THETAALL=np.linspace(0,1,30)*90.
-
 
     mdb.models['Model-1'].DisplacementBC(amplitude=UNSET, createStepName='Step-1',
         distributionType=UNIFORM, fieldName='', fixed=OFF, localCsys=None, name=
@@ -282,8 +254,8 @@ for x2 in X2ALL:
         [TimeS,SYX,SYY]=ExtractVirtualPointRF(NameRef2,'Step-1','Set-1',JobName)
 
 
-        file.write('%e %e %e %e %e %e %e\r\n' % (Time, x2/spacing, THETA, DXX, DXY, DYX, DYY))
-        file2.write('%e %e %e %e %e %e %e\r\n' % (TimeS, x2/spacing, THETA, SXX, SXY, SYX, SYY))
+        file.write('%e %e %e %e %e %e %e\r\n' % (Time, Separation/spacing, THETA, DXX, DXY, DYX, DYY))
+        file2.write('%e %e %e %e %e %e %e\r\n' % (TimeS, Separation/spacing, THETA, SXX, SXY, SYX, SYY))
 
         mdb.models['Model-1'].rootAssembly.rotate(angle=-THETA, axisDirection=(0.0, 0.0,
             1.0), axisPoint=(spacing, spacing, 0.0), instanceList=('Part-1-1', ))
