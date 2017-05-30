@@ -170,11 +170,6 @@ def UpdatePeriodicBound2D(mdb,NameModel,NameRef1,NameRef2,repConst):
 		Node2=mdb.models[NameModel].rootAssembly.sets['Node-2-'+str(j)].nodes[0].coordinates
 		dx=(Node2[0]-Node1[0]);dy=(Node2[1]-Node1[1])
 
-		# for Dim1 in [1,2]:
-		#     mdb.models[NameModel].constraints['PerConst'+str(Dim1)+'-'+str(j)].setValues(
-		# 		terms=((1.0,'Node-1-'+str(j), Dim1),(-1.0, 'Node-2-'+str(j), Dim1) ,
-	 #   		        (dx, 'RefPoint-'+str(Dim1-1), 1),(dy, 'RefPoint-'+str(Dim1-1), 2)))
-
 		mdb.models[NameModel].constraints['PerConst1-'+str(j)].setValues(terms=((1.0,
 		    'Node-1-'+str(j), 1), (-1.0, 'Node-2-'+str(j), 1), (dx, NameRef1, 1), (dy,
 		    NameRef1, 2)))
