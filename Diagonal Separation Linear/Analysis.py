@@ -16,7 +16,8 @@ import numpy as np
 import math
 import time
 
-session.journalOptions.setValues(replayGeometry=COORDINATE, recoverGeometry=COORDINATE)
+session.journalOptions.setValues(
+    replayGeometry=COORDINATE, recoverGeometry=COORDINATE)
 
 execfile('Functions.py')
 
@@ -28,7 +29,8 @@ YoungsModulus = 1.0
 PoissonsRatio = 0.0
 JobName = "ParametrizedDiag"
 
-SeparationAll = np.array([0.001, 0.5 * 1 / 4., 0.25, 0.5 * 3 / 4., 0.5]) * spacing
+SeparationAll = np.array(
+    [0.001, 0.5 * 1 / 4., 0.25, 0.5 * 3 / 4., 0.5]) * spacing
 
 ct = -1
 for Separation in SeparationAll:
@@ -37,7 +39,8 @@ for Separation in SeparationAll:
     file = open(JobName + str(ct) + '_D_Output.txt', 'w')
     file2 = open(JobName + str(ct) + '_RF_Output.txt', 'w')
     # CREATING THE MAIN UNICEL
-    mdb.models['Model-1'].ConstrainedSketch(name='__profile__', sheetSize=200.0)
+    mdb.models['Model-1'].ConstrainedSketch(
+        name='__profile__', sheetSize=200.0)
 
     mdb.models['Model-1'].sketches['__profile__'].Line(point1=(0.0, spacing / 2.), point2=(
         2. * spacing, spacing / 2.))
@@ -75,7 +78,8 @@ for Separation in SeparationAll:
     mdb.models['Model-1'].sketches['__profile__'].Line(point1=(sp1, 2 * spacing), point2=(
         0, sp2))
 
-    mdb.models['Model-1'].Part(dimensionality=TWO_D_PLANAR, name='Part-1', type=DEFORMABLE_BODY)
+    mdb.models['Model-1'].Part(dimensionality=TWO_D_PLANAR,
+                               name='Part-1', type=DEFORMABLE_BODY)
     mdb.models['Model-1'].parts['Part-1'].BaseWire(
         sketch=mdb.models['Model-1'].sketches['__profile__'])
     del mdb.models['Model-1'].sketches['__profile__']
@@ -93,7 +97,8 @@ for Separation in SeparationAll:
     mdb.models['Model-1'].parts['Part-1'].generateMesh()
 
     # CREATING STEP
-    mdb.models['Model-1'].StaticStep(maxNumInc=1000, name='Step-1', previous='Initial')
+    mdb.models['Model-1'].StaticStep(maxNumInc=1000,
+                                     name='Step-1', previous='Initial')
 
     # CREATING SETS
     Part_Full = mdb.models['Model-1'].parts['Part-1']
@@ -166,7 +171,8 @@ for Separation in SeparationAll:
 
     # DEFINING MATERIAL PROPERTIES AND SECTION PROPERTIES
     mdb.models['Model-1'].Material(name='Material-1')
-    mdb.models['Model-1'].materials['Material-1'].Elastic(table=((YoungsModulus, PoissonsRatio), ))
+    mdb.models['Model-1'].materials['Material-1'].Elastic(
+        table=((YoungsModulus, PoissonsRatio), ))
 
     REDGES = rr
     RDIAGONALS = rr / 2.
@@ -232,11 +238,15 @@ for Separation in SeparationAll:
         time.sleep(10)
 
         # EXTRACT INFORMATION INTO FILES
-        [Time, DXX, DXY] = ExtractVirtualPointU(NameRef1, 'Step-1', 'Set-1', JobName)
-        [Time, DYX, DYY] = ExtractVirtualPointU(NameRef2, 'Step-1', 'Set-1', JobName)
+        [Time, DXX, DXY] = ExtractVirtualPointU(
+            NameRef1, 'Step-1', 'Set-1', JobName)
+        [Time, DYX, DYY] = ExtractVirtualPointU(
+            NameRef2, 'Step-1', 'Set-1', JobName)
 
-        [TimeS, SXX, SXY] = ExtractVirtualPointRF(NameRef1, 'Step-1', 'Set-1', JobName)
-        [TimeS, SYX, SYY] = ExtractVirtualPointRF(NameRef2, 'Step-1', 'Set-1', JobName)
+        [TimeS, SXX, SXY] = ExtractVirtualPointRF(
+            NameRef1, 'Step-1', 'Set-1', JobName)
+        [TimeS, SYX, SYY] = ExtractVirtualPointRF(
+            NameRef2, 'Step-1', 'Set-1', JobName)
 
         file.write('%e %e %e %e %e %e %e\r\n' %
                    (Time, Separation / spacing, THETA, DXX, DXY, DYX, DYY))
