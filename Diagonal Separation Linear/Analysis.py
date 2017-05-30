@@ -88,8 +88,8 @@ for Separation in SeparationAll:
     mdb.models['Model-1'].rootAssembly.DatumCsysByDefault(CARTESIAN)
     Instant_Full = mdb.models['Model-1'].rootAssembly.Instance(dependent=ON, name='Part-1-1',
                                                                part=mdb.models['Model-1'].parts['Part-1'])
-    mdb.models['Model-1'].parts['Part-1'].seedPart(deviationFactor=0.01,
-                                                   minSizeFactor=0.01, size=0.01)
+    mdb.models['Model-1'].parts['Part-1'].seedPart(deviationFactor=0.005,
+                                                   minSizeFactor=0.005, size=0.005)
     mdb.models['Model-1'].parts['Part-1'].Set(name='ALL',
                                               edges=mdb.models['Model-1'].parts['Part-1'].edges[:])
     mdb.models['Model-1'].parts['Part-1'].setElementType(elemTypes=(ElemType(
