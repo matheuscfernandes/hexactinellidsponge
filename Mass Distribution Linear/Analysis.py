@@ -21,18 +21,15 @@ session.journalOptions.setValues(
 
 execfile('Functions.py')
 
-spacing = 5.
-TOL = 10E-6
-Strain_Y = -0.1
-cross_section = 0.1
-rr = 0.1
+TOL = 10E-6  # periodic boundary search tolerance
+spacing = 1.  # structure spacing
+Strain_Y = -0.1  # applied y displacment boundary condition
+rr = 0.1 / 2.  # non-diagonal radius, diagonal radius will scale acordingly as 1/2*rr
 YoungsModulus = 1.0
 PoissonsRatio = 0.0
 JobName = "ParametrizedDiag"
 
-VT = 4. * 2. * spacing * pi * rr**2.
-
-Model_DimpleStr = mdb.models['Model-1']
+VT = 2 * pi * spacing * (rr * 2)**2 * (1 + 1 / (2 * sqrt(2)))
 
 # X2ALL=np.array([0.001,0.25/2.,0.25,0.25*3/2.,0.5])*spacing
 
@@ -47,6 +44,7 @@ for MassFraction in MASSFRACTIONALL:
     ct += 1
     file = open(JobName + str(ct) + '_D_Output.txt', 'w')
     file2 = open(JobName + str(ct) + '_RF_Output.txt', 'w')
+
     # CREATING THE MAIN UNICEL
     mdb.models['Model-1'].ConstrainedSketch(
         name='__profile__', sheetSize=200.0)
@@ -63,7 +61,6 @@ for MassFraction in MASSFRACTIONALL:
 
     # CREATING UNICEL FOR THE TWO DIAGONAL PART
     shift = (spacing / 2. - x2)
-
     sp1 = spacing / 2. + shift
     sp2 = spacing + spacing / 2. - shift
 

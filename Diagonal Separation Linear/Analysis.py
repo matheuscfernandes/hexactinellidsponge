@@ -23,7 +23,7 @@ execfile('Functions.py')
 
 TOL = 10E-6  # periodic boundary search tolerance
 spacing = 1.  # structure spacing
-ApplyDisp_Y = -0.1  # applied y displacment boundary condition
+Strain_Y = -0.1  # applied y displacment boundary condition
 rr = 0.1 / 2.  # non-diagonal radius, diagonal radius will scale acordingly as 1/2*rr
 YoungsModulus = 1.0
 PoissonsRatio = 0.0
@@ -211,7 +211,7 @@ for Separation in SeparationAll:
         mdb.models['Model-1'].DisplacementBC(amplitude=UNSET, createStepName='Step-1',
                                              distributionType=UNIFORM, fieldName='', fixed=OFF, localCsys=None, name='BC-REF-2', region=Region(referencePoints=(
                                                  mdb.models['Model-1'].rootAssembly.instances[NameRef2].referencePoints[1],
-                                             )), u1=UNSET, u2=ApplyDisp_Y, ur3=UNSET)
+                                             )), u1=UNSET, u2=Strain_Y, ur3=UNSET)
 
         # ROTATE PART TO DESIRED ORIENTATION
         mdb.models['Model-1'].rootAssembly.rotate(angle=THETA, axisDirection=(0.0, 0.0,
