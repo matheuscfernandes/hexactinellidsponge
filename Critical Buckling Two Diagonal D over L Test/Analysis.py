@@ -35,9 +35,8 @@ for i in range(len(DAll)):
     spacing = LAll[i]
     x2 = spacing / (sqrt(2) + 2)
     rr = DAll[i] / 2.
+    file3 = open(JobName + str(i) + '_Freq_Output.txt', 'w')
 
-    file = open(JobName + str(i) + '_D_Output.txt', 'w')
-    file2 = open(JobName + str(i) + '_RF_Output.txt', 'w')
     # CREATING THE MAIN UNICEL
     mdb.models['Model-1'].ConstrainedSketch(
         name='__profile__', sheetSize=200.0)
@@ -54,6 +53,7 @@ for i in range(len(DAll)):
 
     # CREATING UNICEL FOR THE TWO DIAGONAL PART
     shift = (spacing / 2. - x2)
+
     sp1 = spacing / 2. + shift
     sp2 = spacing + spacing / 2. - shift
 
@@ -87,17 +87,19 @@ for i in range(len(DAll)):
     mdb.models['Model-1'].rootAssembly.DatumCsysByDefault(CARTESIAN)
     Instant_Full = mdb.models['Model-1'].rootAssembly.Instance(dependent=ON, name='Part-1-1',
                                                                part=mdb.models['Model-1'].parts['Part-1'])
-    mdb.models['Model-1'].parts['Part-1'].seedPart(deviationFactor=0.005,
-                                                   minSizeFactor=0.005, size=0.005)
-    mdb.models['Model-1'].parts['Part-1'].Set(name='ALL',
-                                              edges=mdb.models['Model-1'].parts['Part-1'].edges[:])
+    mdb.models['Model-1'].parts['Part-1'].seedPart(deviationFactor=0.1,
+                                                   minSizeFactor=0.1, size=0.1)
+    # mdb.models['Model-1'].parts['Part-1'].seedPart(deviationFactor=0.1,
+    #     minSizeFactor=1., size=1.)
+    mdb.models['Model-1'].parts['Part-1'].Set(
+        name='ALL', edges=mdb.models['Model-1'].parts['Part-1'].edges[:])
     mdb.models['Model-1'].parts['Part-1'].setElementType(elemTypes=(ElemType(
         elemCode=B22, elemLibrary=STANDARD), ), regions=mdb.models['Model-1'].parts['Part-1'].sets['ALL'])
     mdb.models['Model-1'].parts['Part-1'].generateMesh()
 
     # CREATING STEP
-    mdb.models['Model-1'].StaticStep(maxNumInc=1000,
-                                     name='Step-1', previous='Initial')
+    mdb.models['Model-1'].BuckleStep(name='Step-1',
+                                     numEigen=8, previous='Initial', vectors=28)
 
     # CREATING SETS
     Part_Full = mdb.models['Model-1'].parts['Part-1']
@@ -156,7 +158,6 @@ for i in range(len(DAll)):
     Part_Full.Set(name='DIAGONAL', edges=diagIndex)
     Part_Full.Set(name='EDGES', edges=edgeIndex)
 
-    # APPLYING PERIODIC BOUNDARY CONDITIONS
     (NameRef1, NameRef2, repConst) = PeriodicBound2D(mdb, 'Model-1',
                                                      'AllEdgeNode', [(2.0 * spacing, 0.0), (0.0, 2.0 * spacing)])
 
@@ -195,70 +196,74 @@ for i in range(len(DAll)):
         0.0, 0.0, -1.0), region=mdb.models['Model-1'].parts['Part-1'].sets['DIAGONAL'])
 
     # APPLY BC
+    # Apply boundary conditions on reference nodes
+
+    # THETAALL = np.array([0])
+
     THETAALL = np.linspace(0, 1, 30) * 90.
-    # AVOID RIDGID BODY MOTION
-    mdb.models['Model-1'].DisplacementBC(amplitude=UNSET, createStepName='Step-1',
+
+    mdb.models['Model-1'].DisplacementBC(amplitude=UNSET, buckleCase=PERTURBATION_AND_BUCKLING, createStepName='Step-1',
                                          distributionType=UNIFORM, fieldName='', fixed=OFF, localCsys=None, name='BC-FIXNODE', region=Region(
                                              nodes=mdb.models['Model-1'].rootAssembly.instances['Part-1-1'].nodes.getByBoundingSphere(center=(spacing / 2., spacing / 2., 0), radius=TOL)),
                                          u1=0.0, u2=0.0, ur3=UNSET)
 
+    # CONSTRAIN DIAGONALS OF DEFROMATION GRADIENT TO ASSURE SYMMETRY AND AVOID RIGID BODY ROTATION
+    mdb.models['Model-1'].Equation(name='RefPoint-Couple1',
+                                   terms=((1.0, NameRef1, 2), (-1.0, NameRef2, 1)))
+
     for THETA in THETAALL:
-        mdb.models['Model-1'].DisplacementBC(amplitude=UNSET, createStepName='Step-1',
-                                             distributionType=UNIFORM, fieldName='', fixed=OFF, localCsys=None, name='BC-REF-1', region=Region(referencePoints=(
-                                                 mdb.models['Model-1'].rootAssembly.instances[NameRef1].referencePoints[1],
-                                             )), u1=UNSET, u2=UNSET, ur3=UNSET)
-        mdb.models['Model-1'].DisplacementBC(amplitude=UNSET, createStepName='Step-1',
+        # mdb.models['Model-1'].ConcentratedForce(cf1=UNSET,cf2=10 ,createStepName='Step-1',
+     #        distributionType=UNIFORM, field='', localCsys=None, name='Load-Ref-2', region=
+     #        Region(referencePoints=(mdb.models['Model-1'].rootAssembly.instances[NameRef2].referencePoints[1],)))
+
+        # mdb.models['Model-1'].DisplacementBC(amplitude=UNSET, buckleCase=PERTURBATION_AND_BUCKLING, createStepName='Step-1',
+        #     distributionType=UNIFORM, fieldName='', fixed=OFF, localCsys=None, name=
+        #     'BC-REF-1', region=Region(referencePoints=(
+        #     mdb.models['Model-1'].rootAssembly.instances[NameRef1].referencePoints[1],
+        #     )), u1=UNSET, u2=UNSET, ur3=UNSET)
+
+        mdb.models['Model-1'].DisplacementBC(amplitude=UNSET, buckleCase=PERTURBATION_AND_BUCKLING, createStepName='Step-1',
                                              distributionType=UNIFORM, fieldName='', fixed=OFF, localCsys=None, name='BC-REF-2', region=Region(referencePoints=(
                                                  mdb.models['Model-1'].rootAssembly.instances[NameRef2].referencePoints[1],
                                              )), u1=UNSET, u2=Strain_Y, ur3=UNSET)
 
-        # ROTATE PART TO DESIRED ORIENTATION
         mdb.models['Model-1'].rootAssembly.rotate(angle=THETA, axisDirection=(0.0, 0.0,
                                                                               1.0), axisPoint=(spacing, spacing, 0.0), instanceList=('Part-1-1', ))
 
-        # UPDATE PERIODIC BOUNDARY CONDITIONS
         UpdatePeriodicBound2D(mdb, 'Model-1', NameRef1, NameRef2, repConst)
 
-        # ENFORCE STRAIN TENSOR COMPATIBILITY TO AVOID RIGID BODY ROTATION
-        mdb.models['Model-1'].Equation(name='RefPoint-Couple1',
-                                       terms=((1.0, NameRef1, 2), (-1.0, NameRef2, 1)))
-
-        # SUBMIT JOB TO ABAQUS SOLVER
         DeleteAbaqusFiles(JobName)
+
         mdb.models['Model-1'].rootAssembly.regenerate()
+
         mdb.Job(atTime=None, contactPrint=OFF, description='', echoPrint=OFF,
                 explicitPrecision=SINGLE, getMemoryFromAnalysis=True, historyPrint=OFF,
                 memory=90, memoryUnits=PERCENTAGE, model='Model-1', modelPrint=OFF,
                 multiprocessingMode=DEFAULT, name=JobName, nodalOutputPrecision=SINGLE,
                 numCpus=1, numGPUs=0, queue=None, scratch='', type=ANALYSIS,
                 userSubroutine='', waitHours=0, waitMinutes=0)
-
         mdb.jobs[JobName].submit(consistencyChecking=OFF)
         mdb.jobs[JobName].waitForCompletion()
+
         time.sleep(10)
 
-        # EXTRACT INFORMATION INTO FILES
-        [Time, DXX, DXY] = ExtractVirtualPointU(
-            NameRef1, 'Step-1', 'Set-1', JobName)
-        [Time, DYX, DYY] = ExtractVirtualPointU(
-            NameRef2, 'Step-1', 'Set-1', JobName)
+        # [Time,DXX,DXY]=ExtractVirtualPointU(NameRef1,'Step-1','Set-1',JobName)
+        # [Time,DYX,DYY]=ExtractVirtualPointU(NameRef2,'Step-1','Set-1',JobName)
 
-        [TimeS, SXX, SXY] = ExtractVirtualPointRF(
-            NameRef1, 'Step-1', 'Set-1', JobName)
-        [TimeS, SYX, SYY] = ExtractVirtualPointRF(
-            NameRef2, 'Step-1', 'Set-1', JobName)
+        # [TimeS,SXX,SXY]=ExtractVirtualPointRF(NameRef1,'Step-1','Set-1',JobName)
+        # [TimeS,SYX,SYY]=ExtractVirtualPointRF(NameRef2,'Step-1','Set-1',JobName)
+        EigenValues = ExtractEigenMode(JobName, 8)
+        EigenValues = [DAll[i], THETA] + EigenValues
 
-        file.write('%e %e %e %e %e %e %e\r\n' %
-                   (Time, DAll[i], THETA, DXX, DXY, DYX, DYY))
-        file2.write('%e %e %e %e %e %e %e\r\n' %
-                    (TimeS, DAll[i], THETA, SXX, SXY, SYX, SYY))
+        # file1.write('%e %e %e %e %e %e %e %e\r\n' % (Time, MassFraction, x2/spacing,THETA, DXX, DXY, DYX, DYY))
+        # file2.write('%e %e %e %e %e %e %e %e\r\n' % (TimeS, MassFraction, x2/spacing,THETA, SXX, SXY, SYX, SYY))
+        file3.write(CreateEString(10) % tuple(EigenValues))
 
-        # ROTATE PART BACK TO ORIGINAL ALLIGNMENT
         mdb.models['Model-1'].rootAssembly.rotate(angle=-THETA, axisDirection=(0.0, 0.0,
                                                                                1.0), axisPoint=(spacing, spacing, 0.0), instanceList=('Part-1-1', ))
 
-        # CLEAR ABAQUS STATUS FILES
         DeleteAbaqusFilesButODB(JobName)
 
-    file.close()
-    file2.close()
+    # file1.close()
+    # file2.close()
+    file3.close()
