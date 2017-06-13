@@ -130,6 +130,25 @@ def ExtractVirtualPointU(instancename, NameStep, setname, JobName):
     return Time, xDisp, yDisp
 
 
+def ExtractEigenMode(JobName, NumberOfModes):
+    odb = openOdb(path=JobName + '.odb')
+    Freq = []
+    for i in xrange(1, NumberOfModes + 1):
+        Desc = odb.getFrame(i).description
+        Desc = Desc.split("=")
+        Freq.append(float(Desc[1]))
+    odb.close()
+    return Freq
+
+
+def CreateEString(Number):
+    string = '%e'
+    for i in xrange(1, Number):
+        string += ' %e'
+    string += '\r\n'
+    return string
+
+
 def PeriodicBound2D(mdb, NameModel, NameSet, LatticeVec):
     from part import TWO_D_PLANAR, DEFORMABLE_BODY
     # Create reference parts and assemble
@@ -212,11 +231,6 @@ def UpdatePeriodicBound2D(mdb, NameModel, NameRef1, NameRef2, repConst):
                                                         str(j)].nodes[0].coordinates
         dx = (Node2[0] - Node1[0])
         dy = (Node2[1] - Node1[1])
-
-        # for Dim1 in [1,2]:
-        #     mdb.models[NameModel].constraints['PerConst'+str(Dim1)+'-'+str(j)].setValues(
-        # 		terms=((1.0,'Node-1-'+str(j), Dim1),(-1.0, 'Node-2-'+str(j), Dim1) ,
- #   		        (dx, 'RefPoint-'+str(Dim1-1), 1),(dy, 'RefPoint-'+str(Dim1-1), 2)))
 
         mdb.models[NameModel].constraints['PerConst1-' + str(j)].setValues(terms=((1.0,
                                                                                    'Node-1-' + str(j), 1), (-1.0, 'Node-2-' + str(j), 1), (dx, NameRef1, 1), (dy,
