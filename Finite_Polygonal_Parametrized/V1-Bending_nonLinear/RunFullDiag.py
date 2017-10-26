@@ -1,0 +1,16 @@
+import numpy as np
+
+
+oneDiag=False
+twoDiag=False
+fullDiag=True
+
+execfile('AnalysisV1C.py')
+
+for NUMBEROFSIDES in xrange(3,10):
+    for NUMBEROFSYSTEMSPERSIDE in xrange(2,10):
+        if (NUMBEROFSIDES % 2 != 1 or NUMBEROFSYSTEMSPERSIDE % 2 != 1):
+            print "Running Job: ",(NUMBEROFSIDES,NUMBEROFSYSTEMSPERSIDE)
+            FileWrite=open('TwoDiag_Output.txt', 'a+')
+            RunSimulation(NUMBEROFSIDES,5,NUMBEROFSYSTEMSPERSIDE,FileWrite)
+            FileWrite.close()
